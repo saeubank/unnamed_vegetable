@@ -26,24 +26,26 @@ fn run_file(file_name: &String) -> Result<(), Error> {
 fn run_prompt() -> Result<(), Error> {
     let mut buffer = String::new();
     while buffer.trim() != "exit()" {
+        run(&buffer);
         buffer.clear();
 
         print!("unv> ");
 
         io::stdout().flush()?;
         io::stdin().read_line(&mut buffer)?;
-
-        run(&buffer);
     }
     Ok(())
 }
 
 fn run(contents: &String) {
     let tokens = scan_tokens(contents);
+    for token in tokens {
+        println!("{:?}", token);
+    }
     println!("{}", contents);
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 enum Token {
     // White space
     Indent,
@@ -86,18 +88,17 @@ enum Token {
 }
 
 fn scan_tokens(contents: &String) -> Vec<Token> {
-    scan_stored(Vec::new(), &String::new(), contents)
+    scan_stored(Vec::new(), String::new(), contents)
 }
 
-fn scan_stored(acc: Vec<Token>, stored: &String, to_be_scanned: &String) -> Vec<Token> {
+fn scan_stored(acc: Vec<Token>, stored: String, to_be_scanned: &String) -> Vec<Token> {
     match to_be_scanned.chars().next() {
         Some(scan) => {
             match scan {
-                '\t' | '\n' | '(' | ')' | '-' | '+' | '/' | '*' => {
-                    scan_stored_helper(acc, stored, to_be_scanned, scan)
+                '\t' | '\n' | '(' | ')' | '-' | '+' | '/' | '*' | ' ' => { // need special case for ' '?
+                    scan_stored_helper(acc, stored, to_be_scanned, scan) 
                 }
-                // scan_stored([acc, vec![to_token(stored), to_token(&String::from("\t"))]].concat(), &String::new(), &crop_letters(to_be_scanned, 1)),
-
+                '\r' => scan_stored(acc, stored, &crop_letters(to_be_scanned, 1)),
                 // //2 or more
                 // "!"
                 // "!="
@@ -107,7 +108,7 @@ fn scan_stored(acc: Vec<Token>, stored: &String, to_be_scanned: &String) -> Vec<
                 // ">="
                 // "<"
                 // "<="
-                _ => scan_stored(acc, stored, to_be_scanned),
+                _ => scan_stored(acc, format!("{}{}", stored, scan), &crop_letters(to_be_scanned, 1)),
             }
         }
         _ => acc,
@@ -116,13 +117,20 @@ fn scan_stored(acc: Vec<Token>, stored: &String, to_be_scanned: &String) -> Vec<
 
 fn scan_stored_helper(
     acc: Vec<Token>,
-    stored: &String,
+    stored: String,
     to_be_scanned: &String,
     cur_char: char,
 ) -> Vec<Token> {
+    let mut tmp = Vec::new();
+    if let Some(x) = to_token(stored) {
+        tmp.push(x);
+    }
+    if let Some(x) = to_token(cur_char.to_string()) {
+        tmp.push(x);
+    }
     scan_stored(
-        [acc, vec![to_token(stored), to_token(&cur_char.to_string())]].concat(),
-        &String::new(),
+        [acc, tmp].concat(),
+        String::new(),
         &crop_letters(to_be_scanned, 1),
     )
 }
@@ -134,7 +142,7 @@ fn crop_letters(s: &String, pos: usize) -> String {
     }
 }
 
-fn to_token(str_token: &String) -> Token {
+fn to_token(str_token: String) -> Option<Token> {
     let token_map: HashMap<_, _> = vec![
         ("\t", Token::Indent),
         ("\n", Token::NewLine),
@@ -164,16 +172,20 @@ fn to_token(str_token: &String) -> Token {
     .map(|(a, b)| (String::from(a), b))
     .collect();
 
-    match token_map.get(str_token) {
-        Some(token) => token.clone(),
+    if str_token.is_empty() || str_token == " " {
+        return None
+    }
+
+    match token_map.get(&str_token) {
+        Some(token) => Some(token.clone()),
         _ => {
             if str_token.chars().all(|x| "0123456789".contains(x)) {
                 match str_token.parse::<i32>() {
-                    Ok(num) => Token::Number(num),
+                    Ok(num) => Some(Token::Number(num)),
                     Err(e) => panic!("Error parsing i32: {}", e),
                 }
             } else {
-                Token::Identifier(str_token.clone())
+                Some(Token::Identifier(str_token.clone()))
             }
         }
     }
