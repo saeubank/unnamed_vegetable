@@ -8,7 +8,7 @@ unv is a toy language made for my Principles of Programming Languages class fina
 Int, Bool, Closure
 
 ### Functions
-Let, plus, minus, multiply, geq, leq, equal, not, if/else, recursion
+Let, plus, minus, multiply, geq, leq, equal, less, greater, not, and, or, if/else, recursion
 
 ## Example
 
@@ -19,24 +19,23 @@ let b = 10
 let add(x)(y) = x + y
 
 let rec(x) =
-    if x <= 1:
-        return 1
-    else:
-        return rec(x-1) * x
+    if x <= 1
+        1
+    else
+        rec(x-1) * x
 
 let tmp = add(a)
 
-println!(tmp(b))
-println!(rec(a))
+print(tmp(b))
+println(rec(a))
 ```
 
 ## Other
 Other concepts to explore
 
-- Static type checking before running program
 - tail optimization
-- simd support
 - rational numbers
 - a borrow checker
 - cps dynamic optimization
 
+<!-- arrays/ structs-->
