@@ -34,8 +34,9 @@ println(rec(a))
 Other concepts to explore
 
 - tail optimization
+- inf sized ints
 - rational numbers
 - a borrow checker
 - cps dynamic optimization
-
-<!-- arrays/ structs-->
+<!-- // add comments to unv in the form of "//" -->
+<!-- future add? struct, return, yeild, monads, strings, lists -->

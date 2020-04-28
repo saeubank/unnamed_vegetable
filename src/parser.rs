@@ -1,19 +1,18 @@
 use crate::token::Token;
 
-// make parse tokens error and replace
-use std::num::ParseIntError;
-
-fn parse(tokens: Vec<Token>) -> Result<(), ParseIntError> {
-    // turn newline+ into newline
-    // turn tabs into {}
-    Ok(())
+pub fn parse(tokens: Vec<Token>) -> Result<Expr, ParseError> {
+    // turn newline+ into newline?
+    // turn tabs into {}?
+    // turn fn ... -> Expr to fn ... -> Result<Expr, error>
+    equality(&tokens, 0)
 }
 
 fn get_curr_line() -> i32 {
     0
 }
 
-enum Expr {
+#[derive(Debug)]
+pub enum Expr {
     Ident(String),
     ConstInt(i32),
     ConstBool(bool),
@@ -31,119 +30,176 @@ enum Expr {
     Neg(Box<Expr>),
 }
 
-fn equality() -> Expr {
-    let mut expr = comparison();
+pub enum ParseError {
+    Error(i32, String),
+}
+
+fn equality(tokens: &Vec<Token>, i: usize) -> Result<Expr, ParseError> {
+    let mut expr = match comparison(&tokens, i) {
+        Ok(x) => x,
+        Err(e) => return Err(e),
+    };
+    let mut i = i;
     loop {
-        match get_curr() {
-            Token::EqualEqual => {
-                let right = comparison();
-                expr = Expr::Equal(Box::new(expr), Box::new(right));
+        let curr_token = tokens.get(i);
+        match curr_token {
+            Some(Token::EqualEqual) => {
+                let rest = comparison(&tokens, i);
+                match rest {
+                    Ok(right) => expr = Expr::Equal(Box::new(expr), Box::new(right)),
+                    _ => return rest,
+                }
             }
-            Token::BangEqual => {
-                let right = comparison();
-                expr = Expr::NotEqual(Box::new(expr), Box::new(right));
+            Some(Token::BangEqual) => {
+                let rest = comparison(&tokens, i);
+                match rest {
+                    Ok(right) => expr = Expr::NotEqual(Box::new(expr), Box::new(right)),
+                    _ => return rest,
+                }
             }
             _ => break,
         }
-        advance();
+        i += 1;
     }
-    expr
+    Ok(expr)
 }
 
-fn advance() {}
-
-fn comparison() -> Expr {
-    let mut expr = addition();
+fn comparison(tokens: &Vec<Token>, i: usize) -> Result<Expr, ParseError> {
+    let mut expr = match addition(&tokens, i) {
+        Ok(x) => x,
+        Err(e) => return Err(e),
+    };
+    let mut i = i;
     loop {
-        match get_curr() {
-            Token::Greater => {
-                let right = addition();
-                expr = Expr::Greater(Box::new(expr), Box::new(right));
+        let curr_token = tokens.get(i);
+        match curr_token {
+            Some(Token::Greater) => {
+                let rest = addition(&tokens, i);
+                match rest {
+                    Ok(right) => expr = Expr::Greater(Box::new(expr), Box::new(right)),
+                    _ => return rest,
+                }
             }
-            Token::GreaterEqual => {
-                let right = addition();
-                expr = Expr::GreaterEqual(Box::new(expr), Box::new(right));
+            Some(Token::GreaterEqual) => {
+                let rest = addition(&tokens, i);
+                match rest {
+                    Ok(right) => expr = Expr::GreaterEqual(Box::new(expr), Box::new(right)),
+                    _ => return rest,
+                }
             }
-            Token::Less => {
-                let right = addition();
-                expr = Expr::Less(Box::new(expr), Box::new(right));
+            Some(Token::Less) => {
+                let rest = addition(&tokens, i);
+                match rest {
+                    Ok(right) => expr = Expr::Less(Box::new(expr), Box::new(right)),
+                    _ => return rest,
+                }
             }
-            Token::LessEqual => {
-                let right = addition();
-                expr = Expr::LessEqual(Box::new(expr), Box::new(right));
+            Some(Token::LessEqual) => {
+                let rest = addition(&tokens, i);
+                match rest {
+                    Ok(right) => expr = Expr::LessEqual(Box::new(expr), Box::new(right)),
+                    _ => return rest,
+                }
             }
             _ => break,
         }
-        advance();
+        i += 1;
     }
-    expr
+    Ok(expr)
 }
 
-fn addition() -> Expr {
-    let mut expr = multiplication();
+fn addition(tokens: &Vec<Token>, i: usize) -> Result<Expr, ParseError> {
+    let mut expr = match multiplication(&tokens, i) {
+        Ok(x) => x,
+        Err(e) => return Err(e),
+    };
+    let mut i = i;
     loop {
-        match get_curr() {
-            Token::Minus => {
-                let right = multiplication();
-                expr = Expr::Minus(Box::new(expr), Box::new(right));
+        let curr_token = tokens.get(i);
+        match curr_token {
+            Some(Token::Minus) => {
+                let rest = multiplication(&tokens, i);
+                match rest {
+                    Ok(right) => expr = Expr::Minus(Box::new(expr), Box::new(right)),
+                    _ => return rest,
+                }
             }
-            Token::Plus => {
-                let right = multiplication();
-                expr = Expr::Plus(Box::new(expr), Box::new(right));
+            Some(Token::Plus) => {
+                let rest = multiplication(&tokens, i);
+                match rest {
+                    Ok(right) => expr = Expr::Plus(Box::new(expr), Box::new(right)),
+                    _ => return rest,
+                }
             }
             _ => break,
         }
-        advance();
+        i += 1;
     }
-    expr
+    Ok(expr)
 }
 
-fn multiplication() -> Expr {
-    let mut expr = unary();
+fn multiplication(tokens: &Vec<Token>, i: usize) -> Result<Expr, ParseError> {
+    let mut expr = match unary(&tokens, i) {
+        Ok(x) => x,
+        Err(e) => return Err(e),
+    };
+    let mut i = i;
     loop {
-        match get_curr() {
-            Token::Slash => {
-                let right = unary();
-                expr = Expr::Div(Box::new(expr), Box::new(right));
+        let curr_token = tokens.get(i);
+        match curr_token {
+            Some(Token::Slash) => {
+                let rest = unary(&tokens, i);
+                match rest {
+                    Ok(right) => expr = Expr::Div(Box::new(expr), Box::new(right)),
+                    _ => return rest,
+                }
             }
-            Token::Star => {
-                let right = unary();
-                expr = Expr::Mult(Box::new(expr), Box::new(right));
+            Some(Token::Star) => {
+                let rest = unary(&tokens, i);
+                match rest {
+                    Ok(right) => expr = Expr::Mult(Box::new(expr), Box::new(right)),
+                    _ => return rest,
+                }
             }
             _ => break,
         }
-        advance();
+        i += 1;
     }
-    expr
+    Ok(expr)
 }
 
-fn unary() -> Expr {
-    match get_curr() {
-        Token::Bang => {
-            let right = unary();
-            Expr::Not(Box::new(right))
+fn unary(tokens: &Vec<Token>, i: usize) -> Result<Expr, ParseError> {
+    let curr_token = tokens.get(i);
+    match curr_token {
+        Some(Token::Bang) => {
+            let rest = unary(&tokens, i);
+            match rest {
+                Ok(right) => Ok(Expr::Not(Box::new(right))),
+                _ => rest,
+            }
         }
-        Token::Minus => {
-            let right = unary();
-            Expr::Neg(Box::new(right))
+        Some(Token::Minus) => {
+            let rest = unary(&tokens, i);
+            match rest {
+                Ok(right) => Ok(Expr::Neg(Box::new(right))),
+                _ => rest,
+            }
         }
-        _ => primary(),
+        _ => primary(&tokens, i),
     }
 }
 
-fn primary() -> Expr {
-    match get_curr() {
-        Token::True => Expr::ConstBool(true),
-        Token::False => Expr::ConstBool(false),
-        Token::Number(num) => Expr::ConstInt(num),
-        _ => panic!("yo"),
+fn primary(tokens: &Vec<Token>, i: usize) -> Result<Expr, ParseError> {
+    let curr_token = tokens.get(i);
+    match curr_token {
+        Some(Token::True) => Ok(Expr::ConstBool(true)),
+        Some(Token::False) => Ok(Expr::ConstBool(false)),
+        Some(Token::Number(num)) => Ok(Expr::ConstInt(num.clone())),
+        _ => Err(ParseError::Error(get_curr_line(), "bruh".to_string())),
     }
 }
 
-// fn get_curr(tokens: &Vec<Token>, curr: i32) -> Token {
-//     tokens.get(curr)?
-// }
-
-fn get_curr() -> Token {
-    Token::BangEqual
-}
+//             Token::Let => {scan till end of decloration}
+//             Token::If => {scan till Else ends?}
+//             Token::Print
+//             Token::Println

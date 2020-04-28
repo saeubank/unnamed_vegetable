@@ -2,7 +2,7 @@ use std::env;
 use std::fs;
 use std::io::{self, Error, ErrorKind, Write};
 
-mod eval;
+// mod evaler;
 mod lexer;
 mod parser;
 mod token;
@@ -42,9 +42,21 @@ fn run_prompt() -> Result<(), Error> {
 }
 
 fn run(contents: &String) {
+    // lexer should return a result of type Result<Vec<token>, Error> instead of panic!
     let tokens = lexer::scan_tokens(contents);
-    for token in tokens {
-        println!("{:?}", token);
+    for token in &tokens {
+        print!("{:?}, ", token);
     }
+    println!();
     println!("{}", contents);
+    let ast = parser::parse(tokens);
+    match ast {
+        Ok(x) => println!("{:?}", x),
+        Err(e) => println!("Error parsing"),
+    }
+    use parser::Expr;
+    println!(
+        "{:?}",
+        Expr::Minus(Box::new(Expr::ConstInt(2)), Box::new(Expr::ConstInt(1)))
+    );
 }

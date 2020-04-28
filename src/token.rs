@@ -26,7 +26,6 @@ pub enum Token {
 
     // Literals.
     Identifier(String),
-    // String,
     Number(i32),
 
     // Keywords.
@@ -37,5 +36,4 @@ pub enum Token {
     False,
     Print,
     Println,
-    // STRUCT, RETURN, YEILD, monads
 }

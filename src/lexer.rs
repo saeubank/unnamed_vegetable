@@ -9,47 +9,60 @@ fn scan_stored(acc: Vec<Token>, stored: String, to_be_scanned: &String) -> Vec<T
     match to_be_scanned.chars().next() {
         Some(scan) => {
             match scan {
+                // Does ' ' need a speical case?
                 '\t' | '\n' | '(' | ')' | '-' | '+' | '/' | '*' | ' ' => {
-                    // need special case for ' '?
                     scan_stored_helper(acc, stored, to_be_scanned, scan)
                 }
                 '\r' => scan_stored(acc, stored, &slice(to_be_scanned, 1)),
-                // "!" token if next is not =
-                // "!=" token
-                // "=" token if next is not = or if prev is =?
-                // "==" token
-                // ">" token if next is not =
-                // ">=" token
-                // "<" token if next is not =
-                // "<=" token
                 '!' | '>' | '<' => {
                     let mut tmp = Vec::new();
                     if let Some(x) = to_token(stored) {
                         tmp.push(x);
                     }
-                    scan_stored([acc, tmp].concat(), scan.to_string(), &slice(to_be_scanned, 1))
-                }, // token stored and make stored = scan
+                    scan_stored(
+                        [acc, tmp].concat(),
+                        scan.to_string(),
+                        &slice(to_be_scanned, 1),
+                    )
+                }
                 '=' => {
                     match stored.as_str() {
-                        "!" | ">" | "<" | "=" => scan_stored_helper(acc, format!("{}{}", stored, scan), to_be_scanned, '\0'), //token stored+scan and go next
+                        // turn stored+scan into token
+                        "!" | ">" | "<" | "=" => scan_stored_helper(
+                            acc,
+                            format!("{}{}", stored, scan),
+                            to_be_scanned,
+                            '\0',
+                        ),
+                        // turn stored into token
+                        // if next is not "=" turn "=" into token,
+                        // else stored becomes "="
                         _ => {
-                            //token stored, if next is not "=" token "=", else stored = "="
                             let mut tmp = Vec::new();
                             if let Some(x) = to_token(stored) {
                                 tmp.push(x);
                             }
-                            if to_be_scanned.chars().next() == Some('=') {
+                            let mut to_be_scanned_copy = to_be_scanned.chars();
+                            to_be_scanned_copy.next();
+                            if to_be_scanned_copy.next() != Some('=') {
                                 if let Some(x) = to_token(String::from("=")) {
                                     tmp.push(x);
                                 }
-                                scan_stored([acc, tmp].concat(), String::new(), &slice(to_be_scanned, 1))
+                                scan_stored(
+                                    [acc, tmp].concat(),
+                                    String::new(),
+                                    &slice(to_be_scanned, 1),
+                                )
                             } else {
-                                scan_stored([acc, tmp].concat(), String::from("="), &slice(to_be_scanned, 1))
+                                scan_stored(
+                                    [acc, tmp].concat(),
+                                    String::from("="),
+                                    &slice(to_be_scanned, 1),
+                                )
                             }
-                            
                         }
                     }
-                },
+                }
                 _ => scan_stored(acc, format!("{}{}", stored, scan), &slice(to_be_scanned, 1)),
             }
         }
@@ -140,6 +153,6 @@ fn is_digit(s: &String) -> bool {
 }
 
 fn is_alpha(s: &String) -> bool {
-    s.chars().all(|x| ('a'..'z').contains(&x) || ('A'..'Z').contains(&x) || x == '_')
+    s.chars()
+        .all(|x| ('a'..'z').contains(&x) || ('A'..'Z').contains(&x) || x == '_')
 }
-
