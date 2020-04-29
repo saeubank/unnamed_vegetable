@@ -13,17 +13,19 @@ pub fn parse(tokens: Vec<Token>) -> Result<Expr, ParseError> {
     equality(&tokens)
 }
 
-fn get_curr_line(tokens: &Vec<Token>, i: usize) -> usize {
-    let mut count = 0;
-    for i in 0..i {
-        let token = tokens.get(i);
-        match token {
-            Some(Token::NewLine) => count += 1,
-            _ => {}
-        }
-    }
-    count
-}
+// need to figure out how to implement this given recursive code
+// perhaps use how many tokens left to figure out
+// fn get_curr_line(tokens: &Vec<Token>, i: usize) -> usize {
+//     let mut count = 0;
+//     for i in 0..i {
+//         let token = tokens.get(i);
+//         match token {
+//             Some(Token::NewLine) => count += 1,
+//             _ => {}
+//         }
+//     }
+//     count
+// }
 
 #[derive(Debug)]
 pub enum Expr {
@@ -49,8 +51,8 @@ pub enum ParseError {
     Error(usize, String),
 }
 
-// need to figure out how to handle when tokens.length() == 0
-
+// need to figure out how to handle when tokens.length() == 0 (assuming this needs to be handled)
+// match: comp ((== | !=) comp)*
 fn equality(tokens: &[Token]) -> Result<Expr, ParseError> {
     match comparison(&tokens) {
         Ok(expr) => equality_helper(expr, &tokens[1..]),
@@ -58,7 +60,6 @@ fn equality(tokens: &[Token]) -> Result<Expr, ParseError> {
     }
 }
 
-// match patters ((== | !=) expr)*
 fn equality_helper(expr: Expr, tokens: &[Token]) -> Result<Expr, ParseError> {
     match tokens.get(0) {
         Some(Token::EqualEqual) => match comparison(&tokens[1..]) {
@@ -78,6 +79,7 @@ fn equality_helper(expr: Expr, tokens: &[Token]) -> Result<Expr, ParseError> {
     }
 }
 
+// match: add ((> | >= | < | <=) add)*
 fn comparison(tokens: &[Token]) -> Result<Expr, ParseError> {
     match addition(&tokens) {
         Ok(expr) => comparison_helper(expr, &tokens[1..]),
@@ -117,6 +119,7 @@ fn comparison_helper(expr: Expr, tokens: &[Token]) -> Result<Expr, ParseError> {
     }
 }
 
+// match: mult ((- | +) mult)*
 fn addition(tokens: &[Token]) -> Result<Expr, ParseError> {
     match multiplication(&tokens) {
         Ok(expr) => addition_helper(expr, &tokens[1..]),
@@ -140,6 +143,7 @@ fn addition_helper(expr: Expr, tokens: &[Token]) -> Result<Expr, ParseError> {
     }
 }
 
+// match: unary ((/ | *) unary)*
 fn multiplication(tokens: &[Token]) -> Result<Expr, ParseError> {
     match unary(&tokens) {
         Ok(expr) => multiplication_helper(expr, &tokens[1..]),
@@ -165,22 +169,18 @@ fn multiplication_helper(expr: Expr, tokens: &[Token]) -> Result<Expr, ParseErro
     }
 }
 
+// match: ((! | -)*unary)
 fn unary(tokens: &[Token]) -> Result<Expr, ParseError> {
     let curr_token = tokens.get(0);
-    // println!("in unary {}", i);
     match curr_token {
-        Some(Token::Bang) => {
-            match unary(&tokens[1..]) {
-                Ok(right) => Ok(Expr::Not(Box::new(right))),
-                e @ Err(_) => e,
-            }
-        }
-        Some(Token::Minus) => {
-            match unary(&tokens[1..]) {
-                Ok(right) => Ok(Expr::Neg(Box::new(right))),
-                e @ Err(_) => e,
-            }
-        }
+        Some(Token::Bang) => match unary(&tokens[1..]) {
+            Ok(right) => Ok(Expr::Not(Box::new(right))),
+            e @ Err(_) => e,
+        },
+        Some(Token::Minus) => match unary(&tokens[1..]) {
+            Ok(right) => Ok(Expr::Neg(Box::new(right))),
+            e @ Err(_) => e,
+        },
         _ => primary(&tokens),
     }
 }
@@ -196,7 +196,7 @@ fn primary(tokens: &[Token]) -> Result<Expr, ParseError> {
             0,
             format!("{:?}", t),
         )),
-        _ => Err(ParseError::Error(
+        None => Err(ParseError::Error(
             // get_curr_line(&tokens, i),
             0,
             "Got none in parsing".to_string(),
