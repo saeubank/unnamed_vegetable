@@ -52,11 +52,6 @@ fn run(contents: &String) {
     let ast = parser::parse(tokens);
     match ast {
         Ok(x) => println!("{:?}", x),
-        Err(e) => println!("Error parsing"),
+        Err(e) => println!("Error parsing: {:?}", e),
     }
-    use parser::Expr;
-    println!(
-        "{:?}",
-        Expr::Minus(Box::new(Expr::ConstInt(2)), Box::new(Expr::ConstInt(1)))
-    );
 }

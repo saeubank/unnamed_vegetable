@@ -19,11 +19,21 @@ fn scan_stored(acc: Vec<Token>, stored: String, to_be_scanned: &String) -> Vec<T
                     if let Some(x) = to_token(stored) {
                         tmp.push(x);
                     }
-                    scan_stored(
-                        [acc, tmp].concat(),
-                        scan.to_string(),
-                        &slice(to_be_scanned, 1),
-                    )
+                    let mut to_be_scanned_copy = to_be_scanned.chars();
+                    to_be_scanned_copy.next();
+                    if to_be_scanned_copy.next() != Some('=') {
+                        if let Some(x) = to_token(scan.to_string()) {
+                            tmp.push(x);
+                        }
+
+                        scan_stored([acc, tmp].concat(), String::new(), &slice(to_be_scanned, 1))
+                    } else {
+                        scan_stored(
+                            [acc, tmp].concat(),
+                            scan.to_string(),
+                            &slice(to_be_scanned, 1),
+                        )
+                    }
                 }
                 '=' => {
                     match stored.as_str() {
