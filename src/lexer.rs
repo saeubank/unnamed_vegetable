@@ -150,8 +150,7 @@ fn to_token(str_token: String) -> Option<Token> {
                     Some(Token::Identifier(str_token.clone()))
                 } else {
                     // show error on which line and why
-                    println!("yoyoyo {:?}", str_token.chars());
-                    panic!("Error lexing")
+                    panic!("Error lexing {:?}", str_token.chars())
                 }
             }
         }

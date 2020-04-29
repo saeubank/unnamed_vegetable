@@ -1,3 +1,4 @@
+use crate::expr::Expr;
 use crate::token::Token;
 
 //             Token::Let => {scan till end of decloration}
@@ -10,40 +11,57 @@ pub fn parse(tokens: Vec<Token>) -> Result<Expr, ParseError> {
     // turn newline+ into newline?
     // turn tabs into {}?
     // turn fn ... -> Expr to fn ... -> Result<Expr, error>
-    equality(&tokens)
+    let mut parser = Parser::new(tokens);
+    equality(&mut parser)
 }
 
-// need to figure out how to implement this given recursive code
-// perhaps use how many tokens left to figure out
-// fn get_curr_line(tokens: &Vec<Token>, i: usize) -> usize {
-//     let mut count = 0;
-//     for i in 0..i {
-//         let token = tokens.get(i);
-//         match token {
-//             Some(Token::NewLine) => count += 1,
-//             _ => {}
-//         }
-//     }
-//     count
-// }
-
 #[derive(Debug)]
-pub enum Expr {
-    // Ident(String),
-    ConstInt(i32),
-    ConstBool(bool),
-    Equal(Box<Expr>, Box<Expr>),
-    NotEqual(Box<Expr>, Box<Expr>),
-    Greater(Box<Expr>, Box<Expr>),
-    GreaterEqual(Box<Expr>, Box<Expr>),
-    Less(Box<Expr>, Box<Expr>),
-    LessEqual(Box<Expr>, Box<Expr>),
-    Minus(Box<Expr>, Box<Expr>),
-    Plus(Box<Expr>, Box<Expr>),
-    Div(Box<Expr>, Box<Expr>),
-    Mult(Box<Expr>, Box<Expr>),
-    Not(Box<Expr>),
-    Neg(Box<Expr>),
+struct Parser {
+    index: usize,
+    tokens: Vec<Token>,
+}
+
+impl Parser {
+    fn new(tokens: Vec<Token>) -> Self {
+        Self {
+            index: 0,
+            tokens: tokens,
+        }
+    }
+
+    fn curr(&mut self) -> Option<&Token> {
+        self.tokens.get(self.index)
+    }
+
+    fn next(&mut self) -> Option<&Token> {
+        let mut token = self.tokens.get(self.index);
+        self.index += 1;
+        loop {
+            if let Some(t) = token {
+                if t == &Token::NewLine {
+                    token = self.tokens.get(self.index);
+                    self.index += 1;
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+        println!("{:?}", self);
+        token
+    }
+
+    fn get_line(&self) -> usize {
+        let mut count = 1;
+        for i in 0..self.index {
+            match self.tokens.get(i) {
+                Some(Token::NewLine) => count += 1,
+                _ => {}
+            }
+        }
+        count
+    }
 }
 
 #[derive(Debug)]
@@ -53,26 +71,24 @@ pub enum ParseError {
 
 // need to figure out how to handle when tokens.length() == 0 (assuming this needs to be handled)
 // match: comp ((== | !=) comp)*
-fn equality(tokens: &[Token]) -> Result<Expr, ParseError> {
-    match comparison(&tokens) {
-        Ok(expr) => equality_helper(expr, &tokens[1..]),
+fn equality(tokens: &mut Parser) -> Result<Expr, ParseError> {
+    match comparison(tokens) {
+        Ok(expr) => equality_helper(expr, tokens),
         e @ Err(_) => e,
     }
 }
 
-fn equality_helper(expr: Expr, tokens: &[Token]) -> Result<Expr, ParseError> {
-    match tokens.get(0) {
-        Some(Token::EqualEqual) => match comparison(&tokens[1..]) {
+fn equality_helper(expr: Expr, tokens: &mut Parser) -> Result<Expr, ParseError> {
+    println!("In eq");
+    match tokens.next() {
+        Some(Token::EqualEqual) => match comparison(tokens) {
             Ok(right) => {
-                equality_helper(Expr::Equal(Box::new(expr), Box::new(right)), &tokens[2..])
+                equality_helper(Expr::Equal(Box::new(expr), Box::new(right)), tokens)
             }
             e @ Err(_) => e,
         },
-        Some(Token::BangEqual) => match comparison(&tokens[1..]) {
-            Ok(right) => equality_helper(
-                Expr::NotEqual(Box::new(expr), Box::new(right)),
-                &tokens[2..],
-            ),
+        Some(Token::BangEqual) => match comparison(tokens) {
+            Ok(right) => equality_helper(Expr::NotEqual(Box::new(expr), Box::new(right)), tokens),
             e @ Err(_) => e,
         },
         _ => Ok(expr),
@@ -80,39 +96,36 @@ fn equality_helper(expr: Expr, tokens: &[Token]) -> Result<Expr, ParseError> {
 }
 
 // match: add ((> | >= | < | <=) add)*
-fn comparison(tokens: &[Token]) -> Result<Expr, ParseError> {
-    match addition(&tokens) {
-        Ok(expr) => comparison_helper(expr, &tokens[1..]),
+fn comparison(tokens: &mut Parser) -> Result<Expr, ParseError> {
+    match addition(tokens) {
+        Ok(expr) => comparison_helper(expr, tokens),
         e @ Err(_) => e,
     }
 }
 
-fn comparison_helper(expr: Expr, tokens: &[Token]) -> Result<Expr, ParseError> {
-    match tokens.get(0) {
-        Some(Token::Greater) => match addition(&tokens[1..]) {
+fn comparison_helper(expr: Expr, tokens: &mut Parser) -> Result<Expr, ParseError> {
+    println!("In cmp");
+    match tokens.next() {
+        Some(Token::Greater) => match addition(tokens) {
             Ok(right) => {
-                comparison_helper(Expr::Greater(Box::new(expr), Box::new(right)), &tokens[2..])
+                comparison_helper(Expr::Greater(Box::new(expr), Box::new(right)), tokens)
             }
             e @ Err(_) => e,
         },
-        Some(Token::GreaterEqual) => match addition(&tokens[1..]) {
-            Ok(right) => comparison_helper(
-                Expr::GreaterEqual(Box::new(expr), Box::new(right)),
-                &tokens[2..],
-            ),
-            e @ Err(_) => e,
-        },
-        Some(Token::Less) => match addition(&tokens[1..]) {
+        Some(Token::GreaterEqual) => match addition(tokens) {
             Ok(right) => {
-                comparison_helper(Expr::Less(Box::new(expr), Box::new(right)), &tokens[2..])
+                comparison_helper(Expr::GreaterEqual(Box::new(expr), Box::new(right)), tokens)
             }
             e @ Err(_) => e,
         },
-        Some(Token::LessEqual) => match addition(&tokens[1..]) {
-            Ok(right) => comparison_helper(
-                Expr::LessEqual(Box::new(expr), Box::new(right)),
-                &tokens[2..],
-            ),
+        Some(Token::Less) => match addition(tokens) {
+            Ok(right) => comparison_helper(Expr::Less(Box::new(expr), Box::new(right)), tokens),
+            e @ Err(_) => e,
+        },
+        Some(Token::LessEqual) => match addition(tokens) {
+            Ok(right) => {
+                comparison_helper(Expr::LessEqual(Box::new(expr), Box::new(right)), tokens)
+            }
             e @ Err(_) => e,
         },
         _ => Ok(expr),
@@ -120,23 +133,24 @@ fn comparison_helper(expr: Expr, tokens: &[Token]) -> Result<Expr, ParseError> {
 }
 
 // match: mult ((- | +) mult)*
-fn addition(tokens: &[Token]) -> Result<Expr, ParseError> {
-    match multiplication(&tokens) {
-        Ok(expr) => addition_helper(expr, &tokens[1..]),
+fn addition(tokens: &mut Parser) -> Result<Expr, ParseError> {
+    match multiplication(tokens) {
+        Ok(expr) => addition_helper(expr, tokens),
         e @ Err(_) => e,
     }
 }
 
-fn addition_helper(expr: Expr, tokens: &[Token]) -> Result<Expr, ParseError> {
-    match tokens.get(0) {
-        Some(Token::Minus) => match multiplication(&tokens[1..]) {
+fn addition_helper(expr: Expr, tokens: &mut Parser) -> Result<Expr, ParseError> {
+    println!("In add");
+    match tokens.next() {
+        Some(Token::Minus) => match multiplication(tokens) {
             Ok(right) => {
-                addition_helper(Expr::Minus(Box::new(expr), Box::new(right)), &tokens[2..])
+                addition_helper(Expr::Minus(Box::new(expr), Box::new(right)), tokens)
             }
             e @ Err(_) => e,
         },
-        Some(Token::Plus) => match multiplication(&tokens[1..]) {
-            Ok(right) => addition_helper(Expr::Plus(Box::new(expr), Box::new(right)), &tokens[2..]),
+        Some(Token::Plus) => match multiplication(tokens) {
+            Ok(right) => addition_helper(Expr::Plus(Box::new(expr), Box::new(right)), tokens),
             e @ Err(_) => e,
         },
         _ => Ok(expr),
@@ -144,25 +158,24 @@ fn addition_helper(expr: Expr, tokens: &[Token]) -> Result<Expr, ParseError> {
 }
 
 // match: unary ((/ | *) unary)*
-fn multiplication(tokens: &[Token]) -> Result<Expr, ParseError> {
-    match unary(&tokens) {
-        Ok(expr) => multiplication_helper(expr, &tokens[1..]),
+fn multiplication(tokens: &mut Parser) -> Result<Expr, ParseError> {
+    match unary(tokens) {
+        Ok(expr) => multiplication_helper(expr, tokens),
         e @ Err(_) => e,
     }
 }
 
-fn multiplication_helper(expr: Expr, tokens: &[Token]) -> Result<Expr, ParseError> {
-    match tokens.get(0) {
-        Some(Token::Slash) => match unary(&tokens[1..]) {
+fn multiplication_helper(expr: Expr, tokens: &mut Parser) -> Result<Expr, ParseError> {
+    println!("In mult");
+    match tokens.next() {
+        Some(Token::Slash) => match unary(tokens) {
             Ok(right) => {
-                multiplication_helper(Expr::Div(Box::new(expr), Box::new(right)), &tokens[2..])
+                multiplication_helper(Expr::Div(Box::new(expr), Box::new(right)), tokens)
             }
             e @ Err(_) => e,
         },
-        Some(Token::Star) => match unary(&tokens[1..]) {
-            Ok(right) => {
-                multiplication_helper(Expr::Mult(Box::new(expr), Box::new(right)), &tokens[2..])
-            }
+        Some(Token::Star) => match unary(tokens) {
+            Ok(right) => multiplication_helper(Expr::Mult(Box::new(expr), Box::new(right)), tokens),
             e @ Err(_) => e,
         },
         _ => Ok(expr),
@@ -170,35 +183,36 @@ fn multiplication_helper(expr: Expr, tokens: &[Token]) -> Result<Expr, ParseErro
 }
 
 // match: ((! | -)*unary)
-fn unary(tokens: &[Token]) -> Result<Expr, ParseError> {
-    let curr_token = tokens.get(0);
+fn unary(tokens: &mut Parser) -> Result<Expr, ParseError> {
+    println!("In unary");
+    let curr_token = tokens.curr();
     match curr_token {
-        Some(Token::Bang) => match unary(&tokens[1..]) {
+        Some(Token::Bang) => match unary(tokens) {
             Ok(right) => Ok(Expr::Not(Box::new(right))),
             e @ Err(_) => e,
         },
-        Some(Token::Minus) => match unary(&tokens[1..]) {
+        Some(Token::Minus) => match unary(tokens) {
             Ok(right) => Ok(Expr::Neg(Box::new(right))),
             e @ Err(_) => e,
         },
-        _ => primary(&tokens),
+        _ => primary(tokens),
     }
 }
 
-fn primary(tokens: &[Token]) -> Result<Expr, ParseError> {
-    let curr_token = tokens.get(0);
+fn primary(tokens: &mut Parser) -> Result<Expr, ParseError> {
+    println!("In primary {:?}", tokens);
+    let curr_token = tokens.curr();
     match curr_token {
         Some(Token::True) => Ok(Expr::ConstBool(true)),
         Some(Token::False) => Ok(Expr::ConstBool(false)),
         Some(Token::Number(num)) => Ok(Expr::ConstInt(num.clone())),
         Some(t) => Err(ParseError::Error(
-            // get_curr_line(&tokens, i),
+            // tokens.get_line(),
             0,
             format!("{:?}", t),
         )),
         None => Err(ParseError::Error(
-            // get_curr_line(&tokens, i),
-            0,
+            tokens.get_line(),
             "Got none in parsing".to_string(),
         )),
     }
