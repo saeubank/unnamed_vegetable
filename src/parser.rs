@@ -110,7 +110,6 @@ fn comparison(tokens: &mut Parser) -> Result<Expr, ParseError> {
 }
 
 fn comparison_helper(expr: Expr, tokens: &mut Parser) -> Result<Expr, ParseError> {
-    println!("In cmp");
     match tokens.curr() {
         Some(Token::Greater) => {
             tokens.next();
@@ -159,7 +158,6 @@ fn addition(tokens: &mut Parser) -> Result<Expr, ParseError> {
 }
 
 fn addition_helper(expr: Expr, tokens: &mut Parser) -> Result<Expr, ParseError> {
-    println!("In add");
     match tokens.curr() {
         Some(Token::Minus) => {
             tokens.next();
@@ -188,7 +186,6 @@ fn multiplication(tokens: &mut Parser) -> Result<Expr, ParseError> {
 }
 
 fn multiplication_helper(expr: Expr, tokens: &mut Parser) -> Result<Expr, ParseError> {
-    println!("In mult");
     match tokens.curr() {
         Some(Token::Slash) => {
             tokens.next();
@@ -214,9 +211,7 @@ fn multiplication_helper(expr: Expr, tokens: &mut Parser) -> Result<Expr, ParseE
 
 // match: ((! | -)*unary)
 fn unary(tokens: &mut Parser) -> Result<Expr, ParseError> {
-    println!("In unary");
-    let curr_token = tokens.curr();
-    match curr_token {
+    match tokens.curr() {
         Some(Token::Bang) => {
             tokens.next();
             match unary(tokens) {
@@ -236,8 +231,7 @@ fn unary(tokens: &mut Parser) -> Result<Expr, ParseError> {
 }
 
 fn primary(tokens: &mut Parser) -> Result<Expr, ParseError> {
-    let curr_token = tokens.next();
-    match curr_token {
+    match tokens.next() {
         Some(Token::True) => {
             Ok(Expr::ConstBool(true))
         }
@@ -256,5 +250,35 @@ fn primary(tokens: &mut Parser) -> Result<Expr, ParseError> {
             tokens.get_line(),
             "Got none in parsing".to_string(),
         )),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::token::Token;
+    use crate::parser::parse;
+    use crate::expr::Expr;
+    #[test]
+    fn negative_num() {
+        let parser = vec![Token::Minus, Token::Number(2)];
+        let result = parse(parser).unwrap();
+        let correct = Expr::Neg(Box::new(Expr::ConstInt(2)));
+        assert_eq!(correct, result);
+    }
+
+    #[test]
+    fn num_plus_num() {
+        let parser = vec![Token::Number(2), Token::Plus, Token::Number(2)];
+        let result = parse(parser).unwrap();
+        let correct = Expr::Plus(Box::new(Expr::ConstInt(2)), Box::new(Expr::ConstInt(2)));
+        assert_eq!(correct, result);
+    }
+    
+    #[test]
+    fn num_minus_num() {
+        let parser = vec![Token::Number(2), Token::Minus, Token::Number(2)];
+        let result = parse(parser).unwrap();
+        let correct = Expr::Minus(Box::new(Expr::ConstInt(2)), Box::new(Expr::ConstInt(2)));
+        assert_eq!(correct, result);
     }
 }

@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Expr {
     // Ident(String),
     ConstInt(i32),
