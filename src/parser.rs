@@ -1,20 +1,48 @@
 use crate::expr::Expr;
 use crate::token::Token;
+use crate::stmt::Stmt;
 
-//             Token::Let => {scan till end of decloration}
-//             Token::If => {scan till Else ends?}
-//             Token::Print
-//             Token::Println
-// use crate::token::Token;
-
-pub fn parse(tokens: Vec<Token>) -> Result<Expr, ParseError> {
+pub fn parse(tokens: Vec<Token>) -> Result<Vec<Stmt>, ParseError> {
     // turn tabs into {}?
+    let mut ast = Vec::new();
     let mut parser = Parser::new(tokens);
-    expression(&mut parser)
+
+    while !parser.at_end() {
+        match statement(&mut parser) {
+            Ok(stmt) => ast.push(stmt),
+            Err(e) => return Err(e),
+        }
+    }
+    Ok(ast)
 }
 
 fn expression(tokens: &mut Parser) -> Result<Expr, ParseError> {
     equality(tokens)
+}
+
+fn statement(tokens: &mut Parser) -> Result<Stmt, ParseError> {
+    match tokens.curr() {
+        Some(Token::Print) => {// should be the format "print" "(" expr ")" "newline"
+            tokens.next();
+            match expression(tokens) {
+                Ok(expr) => Ok(Stmt::Print(expr)),
+                Err(e) => Err(e)
+            }
+        }
+        Some(Token::Println) => {
+            tokens.next();
+            match expression(tokens) {
+                Ok(expr) => Ok(Stmt::Println(expr)),
+                Err(e) => Err(e)
+            }
+        }
+        // Some(Token::Let) => // till end of decloration
+        // Some(Token::If) => // till end of else statement
+        _ => match expression(tokens) {
+            Ok(expr) => Ok(Stmt::Nothing(expr)),
+            Err(e) => Err(e),
+        },
+    }
 }
 
 #[derive(Debug)]
@@ -31,7 +59,13 @@ impl Parser {
         }
     }
 
+    fn at_end(&self) -> bool {
+        println!("ind: {} len: {}", self.index, self.tokens.len());
+        // needs to count tokens that are not newline?
+        self.index >= self.tokens.iter().filter(|x| x != &&Token::NewLine).count()
+    }
     fn curr(&mut self) -> Option<&Token> {
+        println!("curr: {:?}", self);
         self.tokens.get(self.index)
     }
 
@@ -50,7 +84,7 @@ impl Parser {
                 break;
             }
         }
-        println!("{:?}", self);
+        println!("next: {:?}", self);
         token
     }
 
@@ -81,7 +115,6 @@ fn equality(tokens: &mut Parser) -> Result<Expr, ParseError> {
 }
 
 fn equality_helper(expr: Expr, tokens: &mut Parser) -> Result<Expr, ParseError> {
-    println!("In eq");
     match tokens.curr() {
         Some(Token::EqualEqual) => {
             tokens.next();
@@ -240,22 +273,23 @@ fn primary(tokens: &mut Parser) -> Result<Expr, ParseError> {
         Some(Token::LeftParen) => {
             let expr = expression(tokens);
             match tokens.next() {
-            Some(Token::RightParen) => match expr {
-                Ok(right) => Ok(Expr::Grouping(Box::new(right))),
-                e @ Err(_) => e,
-            },
-            Some(t) => {
-                let tmp = t.clone();
-                Err(ParseError::Error(
+                Some(Token::RightParen) => match expr {
+                    Ok(right) => Ok(Expr::Grouping(Box::new(right))),
+                    e @ Err(_) => e,
+                },
+                Some(t) => {
+                    let tmp = t.clone();
+                    Err(ParseError::Error(
+                        tokens.get_line(),
+                        format!("Expected RightParen got: {:?}", tmp),
+                    ))
+                }
+                None => Err(ParseError::Error(
                     tokens.get_line(),
-                    format!("Expected RightParen got: {:?}", tmp),
-                ))
+                    "Got none in parsing expected RightParen".to_string(),
+                )),
             }
-            None => Err(ParseError::Error(
-                tokens.get_line(),
-                "Got none in parsing expected RightParen".to_string(),
-            )),
-        }},
+        }
         Some(t) => {
             let tmp = t.clone();
             Err(ParseError::Error(
@@ -272,29 +306,30 @@ fn primary(tokens: &mut Parser) -> Result<Expr, ParseError> {
 
 #[cfg(test)]
 mod tests {
-    use crate::expr::Expr;
-    use crate::parser::parse;
-    use crate::token::Token;
+    use super::*;
     #[test]
     fn negative_num() {
-        let parser = vec![Token::Minus, Token::Number(2)];
-        let result = parse(parser).unwrap();
+        let tokens = vec![Token::Minus, Token::Number(2)];
+        let mut parser = Parser::new(tokens);
+        let result = expression(&mut parser).unwrap();
         let correct = Expr::Neg(Box::new(Expr::ConstInt(2)));
         assert_eq!(correct, result);
     }
 
     #[test]
     fn num_plus_num() {
-        let parser = vec![Token::Number(2), Token::Plus, Token::Number(2)];
-        let result = parse(parser).unwrap();
+        let tokens = vec![Token::Number(2), Token::Plus, Token::Number(2)];
+        let mut parser = Parser::new(tokens);
+        let result = expression(&mut parser).unwrap();
         let correct = Expr::Plus(Box::new(Expr::ConstInt(2)), Box::new(Expr::ConstInt(2)));
         assert_eq!(correct, result);
     }
 
     #[test]
     fn num_minus_num() {
-        let parser = vec![Token::Number(2), Token::Minus, Token::Number(2)];
-        let result = parse(parser).unwrap();
+        let tokens = vec![Token::Number(2), Token::Minus, Token::Number(2)];
+        let mut parser = Parser::new(tokens);
+        let result = expression(&mut parser).unwrap();
         let correct = Expr::Minus(Box::new(Expr::ConstInt(2)), Box::new(Expr::ConstInt(2)));
         assert_eq!(correct, result);
     }

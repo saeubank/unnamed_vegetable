@@ -7,6 +7,7 @@ mod expr;
 mod lexer;
 mod parser;
 mod token;
+mod stmt;
 
 fn main() -> Result<(), Error> {
     let args: Vec<String> = env::args().collect();

@@ -26,8 +26,8 @@ let rec(x) =
 
 let tmp = add(a)
 
-print(tmp(b))
-println(rec(a))
+print tmp(b)
+println rec(a)
 ```
 
 ## Other
@@ -38,5 +38,5 @@ Other concepts to explore
 - rational numbers
 - a borrow checker
 - cps dynamic optimization
-<!-- // add comments to unv in the form of "//" -->
-<!-- future add? struct, return, yeild, monads, strings, lists -->
+- add comments to unv in the form of "//"
+- consider adding: struct, return, yeild, monads, strings, lists
