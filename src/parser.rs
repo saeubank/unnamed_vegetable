@@ -8,11 +8,13 @@ use crate::token::Token;
 // use crate::token::Token;
 
 pub fn parse(tokens: Vec<Token>) -> Result<Expr, ParseError> {
-    // turn newline+ into newline?
     // turn tabs into {}?
-    // turn fn ... -> Expr to fn ... -> Result<Expr, error>
     let mut parser = Parser::new(tokens);
-    equality(&mut parser)
+    expression(&mut parser)
+}
+
+fn expression(tokens: &mut Parser) -> Result<Expr, ParseError> {
+    equality(tokens)
 }
 
 #[derive(Debug)]
@@ -232,20 +234,35 @@ fn unary(tokens: &mut Parser) -> Result<Expr, ParseError> {
 
 fn primary(tokens: &mut Parser) -> Result<Expr, ParseError> {
     match tokens.next() {
-        Some(Token::True) => {
-            Ok(Expr::ConstBool(true))
+        Some(Token::True) => Ok(Expr::ConstBool(true)),
+        Some(Token::False) => Ok(Expr::ConstBool(false)),
+        Some(Token::Number(num)) => Ok(Expr::ConstInt(*num)),
+        Some(Token::LeftParen) => {
+            let expr = expression(tokens);
+            match tokens.next() {
+            Some(Token::RightParen) => match expr {
+                Ok(right) => Ok(Expr::Grouping(Box::new(right))),
+                e @ Err(_) => e,
+            },
+            Some(t) => {
+                let tmp = t.clone();
+                Err(ParseError::Error(
+                    tokens.get_line(),
+                    format!("Expected RightParen got: {:?}", tmp),
+                ))
+            }
+            None => Err(ParseError::Error(
+                tokens.get_line(),
+                "Got none in parsing expected RightParen".to_string(),
+            )),
+        }},
+        Some(t) => {
+            let tmp = t.clone();
+            Err(ParseError::Error(
+                tokens.get_line(),
+                format!("Error parsing got: {:?}", tmp),
+            ))
         }
-        Some(Token::False) => {
-            Ok(Expr::ConstBool(false))
-        }
-        Some(Token::Number(num)) => {
-            Ok(Expr::ConstInt(*num))
-        }
-        Some(t) => Err(ParseError::Error(
-            // tokens.get_line(),
-            0,
-            format!("{:?}", t),
-        )),
         None => Err(ParseError::Error(
             tokens.get_line(),
             "Got none in parsing".to_string(),
@@ -255,9 +272,9 @@ fn primary(tokens: &mut Parser) -> Result<Expr, ParseError> {
 
 #[cfg(test)]
 mod tests {
-    use crate::token::Token;
-    use crate::parser::parse;
     use crate::expr::Expr;
+    use crate::parser::parse;
+    use crate::token::Token;
     #[test]
     fn negative_num() {
         let parser = vec![Token::Minus, Token::Number(2)];
@@ -273,7 +290,7 @@ mod tests {
         let correct = Expr::Plus(Box::new(Expr::ConstInt(2)), Box::new(Expr::ConstInt(2)));
         assert_eq!(correct, result);
     }
-    
+
     #[test]
     fn num_minus_num() {
         let parser = vec![Token::Number(2), Token::Minus, Token::Number(2)];

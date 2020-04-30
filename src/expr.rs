@@ -15,4 +15,5 @@ pub enum Expr {
     Mult(Box<Expr>, Box<Expr>),
     Not(Box<Expr>),
     Neg(Box<Expr>),
+    Grouping(Box<Expr>),
 }

@@ -109,8 +109,8 @@ fn to_token(str_token: String) -> Option<Token> {
     let token_map: HashMap<String, Token> = [
         ("\t", Token::Indent),
         ("\n", Token::NewLine),
-        ("(", Token::RightParen),
-        (")", Token::LeftParen),
+        ("(", Token::LeftParen),
+        (")", Token::RightParen),
         ("-", Token::Minus),
         ("+", Token::Plus),
         ("/", Token::Slash),
