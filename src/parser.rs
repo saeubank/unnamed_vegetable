@@ -17,8 +17,8 @@ impl Parser {
     }
 
     fn at_end(&self) -> bool {
-        // self.index >= self.tokens.len()
-        self.index >= self.tokens.iter().filter(|x| x != &&Token::NewLine).count()
+        self.index + 1 >= self.tokens.len()
+        // self.index >= self.tokens.iter().filter(|x| x != &&Token::NewLine).count()
     }
 
     fn curr(&mut self) -> Option<&Token> {
@@ -92,6 +92,7 @@ fn expression(tokens: &mut Parser) -> Result<Expr, ParseError> {
 }
 
 fn statement(tokens: &mut Parser) -> Result<Stmt, ParseError> {
+    // println!("{:?}", tokens);
     match tokens.curr() {
         Some(Token::Print) => {
             // should be the format "print" "(" expr ")" "newline"

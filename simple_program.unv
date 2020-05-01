@@ -1,5 +1,15 @@
-let x = 2 * 2
+let x = 2 + 1 * 2
 let y = x + 5
+let z = (2 + 1) * 2
 
+let rec(x) =
+    if x <= 1
+        1
+    else
+        rec(x-1) * x
+
+print x
 print y
-print 3 >= 2
+println z
+println 3 >= 2
+println rec(5)

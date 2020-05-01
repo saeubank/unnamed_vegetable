@@ -13,10 +13,8 @@ Let, plus, minus, multiply, geq, leq, equal, less, greater, not, and, or, if/els
 ## Example
 
 ```
-let a = 5
-let b = 10
-
-let add(x)(y) = x + y
+let x = 2 * 2
+let y = x + 5
 
 let rec(x) =
     if x <= 1
@@ -24,14 +22,12 @@ let rec(x) =
     else
         rec(x-1) * x
 
-let tmp = add(a)
-
-print tmp(b)
-println rec(a)
+println y
+println 3 >= 2
+println rec(5)
 ```
 
-## Other
-Other concepts to explore
+## Other concepts to explore
 
 - tail optimization
 - inf sized ints

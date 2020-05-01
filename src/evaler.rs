@@ -11,12 +11,14 @@ pub enum EvalError {
 pub fn eval(ast: Vec<Stmt>) -> Result<(), EvalError> {
     let mut env = Env::EmptyEnv;
     for statment in ast {
+        // println!("{:?}", statment);
         match statment {
             Stmt::ValDef(name, e) => match eval_expr(e, &env) {
                 Ok(val) => env = Env::ExtendVal(name, val, Box::new(env.clone())),
                 Err(e) => return Err(e),
             },
-            Stmt::FunDef(_fn_name, _params, _e) => {
+            Stmt::FunDef(fn_name, params, e) => {
+                env = Env::ExtendFn(fn_name, params.get(0).unwrap().clone(), e, Box::new(env.clone()))
                 // let closure = Val::Closure()
                 // for param in params {
                 //     let tmp = Val::Closure(fn_name.clone(), param, e.clone(), env.clone());
@@ -37,6 +39,7 @@ pub fn eval(ast: Vec<Stmt>) -> Result<(), EvalError> {
             },
         }
     }
+    // println!("Done");
     Ok(())
 }
 
