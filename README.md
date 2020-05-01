@@ -2,6 +2,8 @@
 
 unv is a toy language made for my Principles of Programming Languages class final project
 
+[Youtube video](https://youtu.be/OMJgpqiTJSs)
+
 ## Features
 
 ### Datatypes
