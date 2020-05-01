@@ -17,8 +17,8 @@ impl Parser {
     }
 
     fn at_end(&self) -> bool {
-        self.index >= self.tokens.len()
-        // self.index >= self.tokens.iter().filter(|x| x != &&Token::NewLine).count()
+        // self.index >= self.tokens.len()
+        self.index >= self.tokens.iter().filter(|x| x != &&Token::NewLine).count()
     }
 
     fn curr(&mut self) -> Option<&Token> {
@@ -78,7 +78,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<Vec<Stmt>, ParseError> {
     let mut parser = Parser::new(tokens);
 
     while !parser.at_end() {
-        println!("{:?}", ast);
+        // println!("{:?}", ast);
         match statement(&mut parser) {
             Ok(stmt) => ast.push(stmt),
             Err(e) => return Err(e),

@@ -46,10 +46,12 @@ fn run_prompt() -> Result<(), Error> {
 fn run(contents: &String) {
     // lexer should return a result of type Result<Vec<token>, Error> instead of panic!
     let tokens = lexer::scan_tokens(contents);
-    println!("{:?}", tokens);
     let ast = parser::parse(tokens);
     match ast {
-        Ok(x) => println!("{:?}", x),
+        Ok(x) => match evaler::eval(x) {
+            Ok(()) => {}
+            Err(e) => println!("Error evaluating: {:?}", e),
+        },
         Err(e) => println!("Error parsing: {:?}", e),
     }
 }
