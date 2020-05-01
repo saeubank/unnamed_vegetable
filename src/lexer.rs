@@ -141,7 +141,9 @@ fn to_token(str_token: String) -> Option<Token> {
     .map(|(a, b)| (a.to_string(), b.clone()))
     .collect();
 
-    if str_token.trim().is_empty() {
+    if str_token == "\n" {
+        Some(Token::NewLine)
+    } else if str_token.trim().is_empty() {
         None
     } else {
         match token_map.get(&str_token) {
@@ -169,5 +171,5 @@ fn is_digit(s: &String) -> bool {
 
 fn is_alpha(s: &String) -> bool {
     s.chars()
-        .all(|x| ('a'..'z').contains(&x) || ('A'..'Z').contains(&x) || x == '_')
+        .all(|x| ('a'..='z').contains(&x) || ('A'..='Z').contains(&x) || x == '_')
 }

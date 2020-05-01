@@ -1,5 +1,15 @@
 let a = 5
 let b = 10
 
-print a
-println b
+let add(x)(y) = x + y
+
+let rec(x) =
+    if x <= 1
+        1
+    else
+        rec(x-1) * x
+
+let tmp = add(a)
+
+print tmp(b)
+println rec(a)

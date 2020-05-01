@@ -2,7 +2,7 @@ use std::env;
 use std::fs;
 use std::io::{self, Error, ErrorKind, Write};
 
-// mod evaler;
+mod evaler;
 mod expr;
 mod lexer;
 mod parser;

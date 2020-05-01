@@ -1,7 +1,7 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     // White space
-    Indent,
+    // Indent,
     NewLine,
 
     // Single-character tokens.
