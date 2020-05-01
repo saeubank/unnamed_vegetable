@@ -6,8 +6,8 @@ use std::io::{self, Error, ErrorKind, Write};
 mod expr;
 mod lexer;
 mod parser;
-mod token;
 mod stmt;
+mod token;
 
 fn main() -> Result<(), Error> {
     let args: Vec<String> = env::args().collect();
@@ -46,11 +46,7 @@ fn run_prompt() -> Result<(), Error> {
 fn run(contents: &String) {
     // lexer should return a result of type Result<Vec<token>, Error> instead of panic!
     let tokens = lexer::scan_tokens(contents);
-    for token in &tokens {
-        print!("{:?}, ", token);
-    }
-    println!();
-    println!("{}", contents);
+    println!("{:?}", tokens);
     let ast = parser::parse(tokens);
     match ast {
         Ok(x) => println!("{:?}", x),

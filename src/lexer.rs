@@ -10,7 +10,7 @@ fn scan_stored(acc: Vec<Token>, stored: String, to_be_scanned: &String) -> Vec<T
         Some(scan) => {
             match scan {
                 // Does ' ' need a speical case?
-                '\t' | '\n' | '(' | ')' | '-' | '+' | '/' | '*' | ' ' => {
+                '\n' | '\t' | '(' | ')' | '-' | '+' | '/' | '*' | ' ' => {
                     scan_stored_helper(acc, stored, to_be_scanned, scan)
                 }
                 '\r' => scan_stored(acc, stored, &slice(to_be_scanned, 1)),
@@ -76,7 +76,13 @@ fn scan_stored(acc: Vec<Token>, stored: String, to_be_scanned: &String) -> Vec<T
                 _ => scan_stored(acc, format!("{}{}", stored, scan), &slice(to_be_scanned, 1)),
             }
         }
-        _ => acc,
+        _ => {
+            let mut tmp = Vec::new();
+            if let Some(x) = to_token(stored) {
+                tmp.push(x);
+            }
+            [acc, tmp].concat()
+        }
     }
 }
 
@@ -107,8 +113,8 @@ fn to_token(str_token: String) -> Option<Token> {
     // make this const and move out of fn or make static
     let str_token = str_token.trim_matches(char::from(0)).to_string();
     let token_map: HashMap<String, Token> = [
-        ("\t", Token::Indent),
-        ("\n", Token::NewLine),
+        // ("\t", Token::Indent),
+        // ("\n", Token::NewLine),
         ("(", Token::LeftParen),
         (")", Token::RightParen),
         ("-", Token::Minus),
@@ -135,7 +141,7 @@ fn to_token(str_token: String) -> Option<Token> {
     .map(|(a, b)| (a.to_string(), b.clone()))
     .collect();
 
-    if str_token.is_empty() || str_token == " " {
+    if str_token.trim().is_empty() {
         None
     } else {
         match token_map.get(&str_token) {

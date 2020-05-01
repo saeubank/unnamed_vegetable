@@ -1,6 +1,6 @@
 #[derive(Debug, PartialEq)]
 pub enum Expr {
-    // Ident(String),
+    Ident(String),
     ConstInt(i32),
     ConstBool(bool),
     Equal(Box<Expr>, Box<Expr>),
@@ -16,4 +16,6 @@ pub enum Expr {
     Not(Box<Expr>),
     Neg(Box<Expr>),
     Grouping(Box<Expr>),
+    IfElse(Box<Expr>, Box<Expr>, Box<Expr>),
+    FunCall(Box<Expr>, Box<Expr>),
 }

@@ -3,7 +3,6 @@ use crate::expr::Expr;
 pub enum Stmt {
     Print(Expr),
     Println(Expr),
-    Let(String, Expr),
-    IfElse(Expr, Expr),
-    Nothing(Expr),
+    ValDef(String, Expr),
+    FunDef(String, Vec<String>, Expr),
 }

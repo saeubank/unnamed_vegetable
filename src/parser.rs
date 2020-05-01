@@ -1,6 +1,6 @@
 use crate::expr::Expr;
-use crate::token::Token;
 use crate::stmt::Stmt;
+use crate::token::Token;
 
 pub fn parse(tokens: Vec<Token>) -> Result<Vec<Stmt>, ParseError> {
     // turn tabs into {}?
@@ -22,26 +22,65 @@ fn expression(tokens: &mut Parser) -> Result<Expr, ParseError> {
 
 fn statement(tokens: &mut Parser) -> Result<Stmt, ParseError> {
     match tokens.curr() {
-        Some(Token::Print) => {// should be the format "print" "(" expr ")" "newline"
+        Some(Token::Print) => {
+            // should be the format "print" "(" expr ")" "newline"
             tokens.next();
             match expression(tokens) {
                 Ok(expr) => Ok(Stmt::Print(expr)),
-                Err(e) => Err(e)
+                Err(e) => Err(e),
             }
         }
         Some(Token::Println) => {
             tokens.next();
             match expression(tokens) {
                 Ok(expr) => Ok(Stmt::Println(expr)),
-                Err(e) => Err(e)
+                Err(e) => Err(e),
             }
         }
-        // Some(Token::Let) => // till end of decloration
-        // Some(Token::If) => // till end of else statement
-        _ => match expression(tokens) {
-            Ok(expr) => Ok(Stmt::Nothing(expr)),
-            Err(e) => Err(e),
-        },
+        Some(Token::Let) => {
+            // till end of decloration
+            // ident
+            // if it is func then optional (ident)*
+            // = sign
+            tokens.next();
+            match tokens.next() {
+                Some(Token::Identifier(ident)) => {
+                    let ident = ident.clone();
+                    match tokens.next() {
+                        Some(Token::Equal) => match expression(tokens) {
+                            Ok(expr) => Ok(Stmt::ValDef(ident, expr)),
+                            Err(e) => Err(e),
+                        },
+                        _ => Err(ParseError::Error(
+                            tokens.get_line(),
+                            "Expect \"=\" after identifier in let".to_string(),
+                        )),
+                    }
+                }
+                Some(t) => {
+                    let tmp = t.clone();
+                    Err(ParseError::Error(
+                        tokens.get_line(),
+                        format!("Expect identifier after let, got {:?}", tmp),
+                    ))
+                }
+                None => Err(ParseError::Error(
+                    tokens.get_line(),
+                    "Expect identifier after let, got None".to_string(),
+                )),
+            }
+
+            // match (ident)*
+
+            // match expression(tokens) {
+            //     Ok(expr) => Ok(Stmt::Println(expr)),
+            //     Err(e) => Err(e)
+            // }
+        }
+        _ => Err(ParseError::Error(
+            tokens.get_line(),
+            "Statement error".to_string(),
+        )),
     }
 }
 
@@ -60,31 +99,31 @@ impl Parser {
     }
 
     fn at_end(&self) -> bool {
-        println!("ind: {} len: {}", self.index, self.tokens.len());
+        // println!("ind: {} len: {}", self.index, self.tokens.len());
         // needs to count tokens that are not newline?
         self.index >= self.tokens.iter().filter(|x| x != &&Token::NewLine).count()
     }
     fn curr(&mut self) -> Option<&Token> {
-        println!("curr: {:?}", self);
+        // println!("curr: {:?}", self);
         self.tokens.get(self.index)
     }
 
     fn next(&mut self) -> Option<&Token> {
         let mut token = self.tokens.get(self.index);
         self.index += 1;
-        loop {
-            if let Some(t) = token {
-                if t == &Token::NewLine {
-                    token = self.tokens.get(self.index);
-                    self.index += 1;
-                } else {
-                    break;
-                }
-            } else {
-                break;
-            }
-        }
-        println!("next: {:?}", self);
+        // loop {
+        //     if let Some(t) = token {
+        //         if t == &Token::NewLine {
+        //             token = self.tokens.get(self.index);
+        //             self.index += 1;
+        //         } else {
+        //             break;
+        //         }
+        //     } else {
+        //         break;
+        //     }
+        // }
+        // println!("next: {:?}", self);
         token
     }
 
@@ -270,6 +309,7 @@ fn primary(tokens: &mut Parser) -> Result<Expr, ParseError> {
         Some(Token::True) => Ok(Expr::ConstBool(true)),
         Some(Token::False) => Ok(Expr::ConstBool(false)),
         Some(Token::Number(num)) => Ok(Expr::ConstInt(*num)),
+        Some(Token::Identifier(ident)) => Ok(Expr::Ident(ident.clone())),
         Some(Token::LeftParen) => {
             let expr = expression(tokens);
             match tokens.next() {
@@ -282,6 +322,38 @@ fn primary(tokens: &mut Parser) -> Result<Expr, ParseError> {
                     Err(ParseError::Error(
                         tokens.get_line(),
                         format!("Expected RightParen got: {:?}", tmp),
+                    ))
+                }
+                None => Err(ParseError::Error(
+                    tokens.get_line(),
+                    "Got none in parsing expected RightParen".to_string(),
+                )),
+            }
+        }
+        Some(Token::If) => {
+            let if_expr = expression(tokens);
+            let true_expr = expression(tokens);
+            match tokens.next() {
+                Some(Token::Else) => match (if_expr, true_expr) {
+                    (Ok(first), Ok(second)) => {
+                        let false_expr = expression(tokens);
+                        match false_expr {
+                            Ok(third) => Ok(Expr::IfElse(
+                                Box::new(first),
+                                Box::new(second),
+                                Box::new(third),
+                            )),
+                            e @ Err(_) => e,
+                        }
+                    }
+                    (e @ Err(_), _) => e,
+                    (_, e @ Err(_)) => e,
+                },
+                Some(t) => {
+                    let tmp = t.clone();
+                    Err(ParseError::Error(
+                        tokens.get_line(),
+                        format!("Expected else got: {:?}", tmp),
                     ))
                 }
                 None => Err(ParseError::Error(
