@@ -7,14 +7,32 @@ unv is a toy language made for my Principles of Programming Languages class fina
 ### Datatypes
 Int, Bool, Closure
 
-### Functions
-Let, plus, minus, multiply, geq, leq, equal, less, greater, not, and, or, if/else, recursion
+### What you can do
+- let
+- print
+- println
+- Equal
+- NotEqual
+- Greater
+- GreaterEqual
+- Less
+- LessEqual
+- Minus
+- Plus
+- Div
+- Mult
+- Not
+- Negate
+- Groupings
+- IfElse
+- FunCall (with recursion)
 
 ## Example
 
 ```
-let x = 2 * 2
+let x = 2 + 1 * 2
 let y = x + 5
+let z = (2 + 1) * 2
 
 let rec(x) =
     if x <= 1
@@ -22,17 +40,18 @@ let rec(x) =
     else
         rec(x-1) * x
 
-println y
+print x
+print y
+println z
 println 3 >= 2
 println rec(5)
 ```
 
 ## Other concepts to explore
 
-- tail optimization
 - inf sized ints
 - rational numbers
 - a borrow checker
 - cps dynamic optimization
 - add comments to unv in the form of "//"
-- consider adding: struct, return, yeild, monads, strings, lists
+- consider adding: struct, return, yield, monads, strings, lists
