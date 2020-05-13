@@ -73,12 +73,10 @@ pub enum ParseError {
 }
 
 pub fn parse(tokens: Vec<Token>) -> Result<Vec<Stmt>, ParseError> {
-    // turn tabs into {}?
     let mut ast = Vec::new();
     let mut parser = Parser::new(tokens);
 
     while !parser.at_end() {
-        // println!("{:?}", ast);
         match statement(&mut parser) {
             Ok(stmt) => ast.push(stmt),
             Err(e) => return Err(e),
@@ -92,22 +90,14 @@ fn expression(tokens: &mut Parser) -> Result<Expr, ParseError> {
 }
 
 fn statement(tokens: &mut Parser) -> Result<Stmt, ParseError> {
-    // println!("{:?}", tokens);
     match tokens.curr() {
         Some(Token::Print) => {
-            // should be the format "print" "(" expr ")" "newline"
             tokens.next();
-            match expression(tokens) {
-                Ok(expr) => Ok(Stmt::Print(expr)),
-                Err(e) => Err(e),
-            }
+            expression(tokens).map(|expr| Stmt::Print(expr))
         }
         Some(Token::Println) => {
             tokens.next();
-            match expression(tokens) {
-                Ok(expr) => Ok(Stmt::Println(expr)),
-                Err(e) => Err(e),
-            }
+            expression(tokens).map(|expr| Stmt::Println(expr))
         }
         Some(Token::Let) => {
             // till end of decloration
@@ -258,32 +248,21 @@ fn fndef_helper(params: Vec<String>, tokens: &mut Parser) -> Result<Vec<String>,
         )),
     }
 }
-// need to figure out how to handle when tokens.length() == 0 (assuming this needs to be handled)
+
 // match: comp ((== | !=) comp)*
 fn equality(tokens: &mut Parser) -> Result<Expr, ParseError> {
-    match comparison(tokens) {
-        Ok(expr) => equality_helper(expr, tokens),
-        e @ Err(_) => e,
-    }
+    comparison(tokens).and_then(|expr| equality_helper(expr, tokens))
 }
 
 fn equality_helper(expr: Expr, tokens: &mut Parser) -> Result<Expr, ParseError> {
     match tokens.curr() {
         Some(Token::EqualEqual) => {
             tokens.next();
-            match comparison(tokens) {
-                Ok(right) => equality_helper(Expr::Equal(Box::new(expr), Box::new(right)), tokens),
-                e @ Err(_) => e,
-            }
+            comparison(tokens).and_then(|right| equality_helper(Expr::Equal(Box::new(expr), Box::new(right)), tokens))
         }
         Some(Token::BangEqual) => {
             tokens.next();
-            match comparison(tokens) {
-                Ok(right) => {
-                    equality_helper(Expr::NotEqual(Box::new(expr), Box::new(right)), tokens)
-                }
-                e @ Err(_) => e,
-            }
+            comparison(tokens).and_then(|right| equality_helper(Expr::NotEqual(Box::new(expr), Box::new(right)), tokens))
         }
         _ => Ok(expr),
     }
@@ -291,47 +270,26 @@ fn equality_helper(expr: Expr, tokens: &mut Parser) -> Result<Expr, ParseError> 
 
 // match: add ((> | >= | < | <=) add)*
 fn comparison(tokens: &mut Parser) -> Result<Expr, ParseError> {
-    match addition(tokens) {
-        Ok(expr) => comparison_helper(expr, tokens),
-        e @ Err(_) => e,
-    }
+    addition(tokens).and_then(|expr| comparison_helper(expr, tokens))
 }
 
 fn comparison_helper(expr: Expr, tokens: &mut Parser) -> Result<Expr, ParseError> {
     match tokens.curr() {
         Some(Token::Greater) => {
             tokens.next();
-            match addition(tokens) {
-                Ok(right) => {
-                    comparison_helper(Expr::Greater(Box::new(expr), Box::new(right)), tokens)
-                }
-                e @ Err(_) => e,
-            }
+            addition(tokens).and_then(|right| comparison_helper(Expr::Greater(Box::new(expr), Box::new(right)), tokens))
         }
         Some(Token::GreaterEqual) => {
             tokens.next();
-            match addition(tokens) {
-                Ok(right) => {
-                    comparison_helper(Expr::GreaterEqual(Box::new(expr), Box::new(right)), tokens)
-                }
-                e @ Err(_) => e,
-            }
+            addition(tokens).and_then(|right| comparison_helper(Expr::GreaterEqual(Box::new(expr), Box::new(right)), tokens))
         }
         Some(Token::Less) => {
             tokens.next();
-            match addition(tokens) {
-                Ok(right) => comparison_helper(Expr::Less(Box::new(expr), Box::new(right)), tokens),
-                e @ Err(_) => e,
-            }
+            addition(tokens).and_then(|right| comparison_helper(Expr::Less(Box::new(expr), Box::new(right)), tokens))
         }
         Some(Token::LessEqual) => {
             tokens.next();
-            match addition(tokens) {
-                Ok(right) => {
-                    comparison_helper(Expr::LessEqual(Box::new(expr), Box::new(right)), tokens)
-                }
-                e @ Err(_) => e,
-            }
+            addition(tokens).and_then(|right| comparison_helper(Expr::LessEqual(Box::new(expr), Box::new(right)), tokens))
         }
         _ => Ok(expr),
     }
@@ -339,27 +297,18 @@ fn comparison_helper(expr: Expr, tokens: &mut Parser) -> Result<Expr, ParseError
 
 // match: mult ((- | +) mult)*
 fn addition(tokens: &mut Parser) -> Result<Expr, ParseError> {
-    match multiplication(tokens) {
-        Ok(expr) => addition_helper(expr, tokens),
-        e @ Err(_) => e,
-    }
+    multiplication(tokens).and_then(|expr| addition_helper(expr, tokens))
 }
 
 fn addition_helper(expr: Expr, tokens: &mut Parser) -> Result<Expr, ParseError> {
     match tokens.curr() {
         Some(Token::Minus) => {
             tokens.next();
-            match multiplication(tokens) {
-                Ok(right) => addition_helper(Expr::Minus(Box::new(expr), Box::new(right)), tokens),
-                e @ Err(_) => e,
-            }
+            multiplication(tokens).and_then(|right| addition_helper(Expr::Minus(Box::new(expr), Box::new(right)), tokens))
         }
         Some(Token::Plus) => {
             tokens.next();
-            match multiplication(tokens) {
-                Ok(right) => addition_helper(Expr::Plus(Box::new(expr), Box::new(right)), tokens),
-                e @ Err(_) => e,
-            }
+            multiplication(tokens).and_then(|right| addition_helper(Expr::Plus(Box::new(expr), Box::new(right)), tokens))
         }
         _ => Ok(expr),
     }
@@ -367,31 +316,18 @@ fn addition_helper(expr: Expr, tokens: &mut Parser) -> Result<Expr, ParseError> 
 
 // match: unary ((/ | *) unary)*
 fn multiplication(tokens: &mut Parser) -> Result<Expr, ParseError> {
-    match unary(tokens) {
-        Ok(expr) => multiplication_helper(expr, tokens),
-        e @ Err(_) => e,
-    }
+    unary(tokens).and_then(|expr| multiplication_helper(expr, tokens))
 }
 
 fn multiplication_helper(expr: Expr, tokens: &mut Parser) -> Result<Expr, ParseError> {
     match tokens.curr() {
         Some(Token::Slash) => {
             tokens.next();
-            match unary(tokens) {
-                Ok(right) => {
-                    multiplication_helper(Expr::Div(Box::new(expr), Box::new(right)), tokens)
-                }
-                e @ Err(_) => e,
-            }
+            unary(tokens).and_then(|right| multiplication_helper(Expr::Div(Box::new(expr), Box::new(right)), tokens))
         }
         Some(Token::Star) => {
             tokens.next();
-            match unary(tokens) {
-                Ok(right) => {
-                    multiplication_helper(Expr::Mult(Box::new(expr), Box::new(right)), tokens)
-                }
-                e @ Err(_) => e,
-            }
+            unary(tokens).and_then(|right| multiplication_helper(Expr::Mult(Box::new(expr), Box::new(right)), tokens))
         }
         _ => Ok(expr),
     }
@@ -402,17 +338,11 @@ fn unary(tokens: &mut Parser) -> Result<Expr, ParseError> {
     match tokens.curr() {
         Some(Token::Bang) => {
             tokens.next();
-            match unary(tokens) {
-                Ok(right) => Ok(Expr::Not(Box::new(right))),
-                e @ Err(_) => e,
-            }
+            unary(tokens).map(|right| Expr::Not(Box::new(right)))
         }
         Some(Token::Minus) => {
             tokens.next();
-            match unary(tokens) {
-                Ok(right) => Ok(Expr::Neg(Box::new(right))),
-                e @ Err(_) => e,
-            }
+            unary(tokens).map(|right| Expr::Neg(Box::new(right)))
         }
         _ => primary(tokens),
     }
