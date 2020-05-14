@@ -258,11 +258,15 @@ fn equality_helper(expr: Expr, tokens: &mut Parser) -> Result<Expr, ParseError> 
     match tokens.curr() {
         Some(Token::EqualEqual) => {
             tokens.next();
-            comparison(tokens).and_then(|right| equality_helper(Expr::Equal(Box::new(expr), Box::new(right)), tokens))
+            comparison(tokens).and_then(|right| {
+                equality_helper(Expr::Equal(Box::new(expr), Box::new(right)), tokens)
+            })
         }
         Some(Token::BangEqual) => {
             tokens.next();
-            comparison(tokens).and_then(|right| equality_helper(Expr::NotEqual(Box::new(expr), Box::new(right)), tokens))
+            comparison(tokens).and_then(|right| {
+                equality_helper(Expr::NotEqual(Box::new(expr), Box::new(right)), tokens)
+            })
         }
         _ => Ok(expr),
     }
@@ -277,19 +281,27 @@ fn comparison_helper(expr: Expr, tokens: &mut Parser) -> Result<Expr, ParseError
     match tokens.curr() {
         Some(Token::Greater) => {
             tokens.next();
-            addition(tokens).and_then(|right| comparison_helper(Expr::Greater(Box::new(expr), Box::new(right)), tokens))
+            addition(tokens).and_then(|right| {
+                comparison_helper(Expr::Greater(Box::new(expr), Box::new(right)), tokens)
+            })
         }
         Some(Token::GreaterEqual) => {
             tokens.next();
-            addition(tokens).and_then(|right| comparison_helper(Expr::GreaterEqual(Box::new(expr), Box::new(right)), tokens))
+            addition(tokens).and_then(|right| {
+                comparison_helper(Expr::GreaterEqual(Box::new(expr), Box::new(right)), tokens)
+            })
         }
         Some(Token::Less) => {
             tokens.next();
-            addition(tokens).and_then(|right| comparison_helper(Expr::Less(Box::new(expr), Box::new(right)), tokens))
+            addition(tokens).and_then(|right| {
+                comparison_helper(Expr::Less(Box::new(expr), Box::new(right)), tokens)
+            })
         }
         Some(Token::LessEqual) => {
             tokens.next();
-            addition(tokens).and_then(|right| comparison_helper(Expr::LessEqual(Box::new(expr), Box::new(right)), tokens))
+            addition(tokens).and_then(|right| {
+                comparison_helper(Expr::LessEqual(Box::new(expr), Box::new(right)), tokens)
+            })
         }
         _ => Ok(expr),
     }
@@ -304,11 +316,15 @@ fn addition_helper(expr: Expr, tokens: &mut Parser) -> Result<Expr, ParseError> 
     match tokens.curr() {
         Some(Token::Minus) => {
             tokens.next();
-            multiplication(tokens).and_then(|right| addition_helper(Expr::Minus(Box::new(expr), Box::new(right)), tokens))
+            multiplication(tokens).and_then(|right| {
+                addition_helper(Expr::Minus(Box::new(expr), Box::new(right)), tokens)
+            })
         }
         Some(Token::Plus) => {
             tokens.next();
-            multiplication(tokens).and_then(|right| addition_helper(Expr::Plus(Box::new(expr), Box::new(right)), tokens))
+            multiplication(tokens).and_then(|right| {
+                addition_helper(Expr::Plus(Box::new(expr), Box::new(right)), tokens)
+            })
         }
         _ => Ok(expr),
     }
@@ -323,11 +339,15 @@ fn multiplication_helper(expr: Expr, tokens: &mut Parser) -> Result<Expr, ParseE
     match tokens.curr() {
         Some(Token::Slash) => {
             tokens.next();
-            unary(tokens).and_then(|right| multiplication_helper(Expr::Div(Box::new(expr), Box::new(right)), tokens))
+            unary(tokens).and_then(|right| {
+                multiplication_helper(Expr::Div(Box::new(expr), Box::new(right)), tokens)
+            })
         }
         Some(Token::Star) => {
             tokens.next();
-            unary(tokens).and_then(|right| multiplication_helper(Expr::Mult(Box::new(expr), Box::new(right)), tokens))
+            unary(tokens).and_then(|right| {
+                multiplication_helper(Expr::Mult(Box::new(expr), Box::new(right)), tokens)
+            })
         }
         _ => Ok(expr),
     }

@@ -1,74 +1,77 @@
 use crate::token::Token;
 use std::collections::HashMap;
 
-pub fn scan_tokens(contents: &String) -> Vec<Token> {
-    scan_stored(Vec::new(), String::new(), contents)
+pub fn scan_tokens(contents: &String) -> Result<Vec<Token>, LexError> {
+    let mut tokens = Vec::new();
+    match scan_stored(&mut tokens, String::new(), contents) {
+        Ok(()) => Ok(tokens),
+        Err(e) => Err(e),
+    }
 }
 
-fn scan_stored(acc: Vec<Token>, stored: String, to_be_scanned: &String) -> Vec<Token> {
+#[derive(Debug)]
+pub enum LexError {
+    Error,
+}
+
+fn scan_stored(
+    acc: &mut Vec<Token>,
+    stored: String,
+    to_be_scanned: &String,
+) -> Result<(), LexError> {
     match to_be_scanned.chars().next() {
         Some(scan) => {
             match scan {
-                // Does ' ' need a speical case?
                 '\n' | '\t' | '(' | ')' | '-' | '+' | '/' | '*' | ' ' => {
-                    scan_stored_helper(acc, stored, to_be_scanned, scan)
+                    if let Some(x) = to_token(stored) {
+                        acc.push(x);
+                    }
+                    if let Some(x) = to_token(scan.to_string()) {
+                        acc.push(x);
+                    }
+                    scan_stored(acc, String::new(), &slice(to_be_scanned, 1))
                 }
                 '\r' => scan_stored(acc, stored, &slice(to_be_scanned, 1)),
                 '!' | '>' | '<' => {
-                    let mut tmp = Vec::new();
                     if let Some(x) = to_token(stored) {
-                        tmp.push(x);
+                        acc.push(x);
                     }
                     let mut to_be_scanned_copy = to_be_scanned.chars();
                     to_be_scanned_copy.next();
                     if to_be_scanned_copy.next() != Some('=') {
                         if let Some(x) = to_token(scan.to_string()) {
-                            tmp.push(x);
+                            acc.push(x);
                         }
 
-                        scan_stored([acc, tmp].concat(), String::new(), &slice(to_be_scanned, 1))
+                        scan_stored(acc, String::new(), &slice(to_be_scanned, 1))
                     } else {
-                        scan_stored(
-                            [acc, tmp].concat(),
-                            scan.to_string(),
-                            &slice(to_be_scanned, 1),
-                        )
+                        scan_stored(acc, scan.to_string(), &slice(to_be_scanned, 1))
                     }
                 }
                 '=' => {
                     match stored.as_str() {
-                        // turn stored+scan into token
-                        "!" | ">" | "<" | "=" => scan_stored_helper(
-                            acc,
-                            format!("{}{}", stored, scan),
-                            to_be_scanned,
-                            '\0',
-                        ),
+                        "!" | ">" | "<" | "=" => {
+                            if let Some(x) = to_token(format!("{}{}", stored, scan)) {
+                                acc.push(x);
+                            }
+                            scan_stored(acc, String::new(), &slice(to_be_scanned, 1))
+                        }
                         // turn stored into token
                         // if next is not "=" turn "=" into token,
                         // else stored becomes "="
                         _ => {
-                            let mut tmp = Vec::new();
                             if let Some(x) = to_token(stored) {
-                                tmp.push(x);
+                                acc.push(x);
                             }
                             let mut to_be_scanned_copy = to_be_scanned.chars();
                             to_be_scanned_copy.next();
                             if to_be_scanned_copy.next() != Some('=') {
                                 if let Some(x) = to_token(String::from("=")) {
-                                    tmp.push(x);
+                                    acc.push(x)
                                 }
-                                scan_stored(
-                                    [acc, tmp].concat(),
-                                    String::new(),
-                                    &slice(to_be_scanned, 1),
-                                )
+                                scan_stored(acc, String::new(), &slice(to_be_scanned, 1))
                             } else {
-                                scan_stored(
-                                    [acc, tmp].concat(),
-                                    String::from("="),
-                                    &slice(to_be_scanned, 1),
-                                )
+                                scan_stored(acc, String::from("="), &slice(to_be_scanned, 1))
                             }
                         }
                     }
@@ -77,29 +80,12 @@ fn scan_stored(acc: Vec<Token>, stored: String, to_be_scanned: &String) -> Vec<T
             }
         }
         _ => {
-            let mut tmp = Vec::new();
             if let Some(x) = to_token(stored) {
-                tmp.push(x);
+                acc.push(x);
             }
-            [acc, tmp].concat()
+            Ok(())
         }
     }
-}
-
-fn scan_stored_helper(
-    acc: Vec<Token>,
-    stored: String,
-    to_be_scanned: &String,
-    cur_char: char,
-) -> Vec<Token> {
-    let mut tmp = Vec::new();
-    if let Some(x) = to_token(stored) {
-        tmp.push(x);
-    }
-    if let Some(x) = to_token(cur_char.to_string()) {
-        tmp.push(x);
-    }
-    scan_stored([acc, tmp].concat(), String::new(), &slice(to_be_scanned, 1))
 }
 
 fn slice(s: &String, pos: usize) -> String {
@@ -110,8 +96,8 @@ fn slice(s: &String, pos: usize) -> String {
 }
 
 fn to_token(str_token: String) -> Option<Token> {
-    // make this const and move out of fn or make static
     let str_token = str_token.trim_matches(char::from(0)).to_string();
+    // make this const or static
     let token_map: HashMap<String, Token> = [
         // ("\t", Token::Indent),
         // ("\n", Token::NewLine),
@@ -159,6 +145,7 @@ fn to_token(str_token: String) -> Option<Token> {
                 } else {
                     // show error on which line and why
                     panic!("Error lexing {:?}", str_token.chars())
+                    // Err(LexError::Error)
                 }
             }
         }

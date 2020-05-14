@@ -11,14 +11,18 @@ pub enum EvalError {
 pub fn eval(ast: Vec<Stmt>) -> Result<(), EvalError> {
     let mut env = Env::EmptyEnv;
     for statment in ast {
-        // println!("{:?}", statment);
         match statment {
             Stmt::ValDef(name, e) => match eval_expr(e, &env) {
                 Ok(val) => env = Env::ExtendVal(name, val, Box::new(env.clone())),
                 Err(e) => return Err(e),
             },
             Stmt::FunDef(fn_name, params, e) => {
-                env = Env::ExtendFn(fn_name, params.get(0).unwrap().clone(), e, Box::new(env.clone()))
+                env = Env::ExtendFn(
+                    fn_name,
+                    params.get(0).unwrap().clone(),
+                    e,
+                    Box::new(env.clone()),
+                )
                 // let closure = Val::Closure()
                 // for param in params {
                 //     let tmp = Val::Closure(fn_name.clone(), param, e.clone(), env.clone());
@@ -113,54 +117,30 @@ fn eval_expr(e: Expr, env: &Env) -> Result<Val, EvalError> {
         },
         Expr::ConstInt(x) => Ok(Val::IntVal(x)),
         Expr::ConstBool(x) => Ok(Val::BoolVal(x)),
-        Expr::Equal(e1, e2) => match apply_comp_ordered(*e1, *e2, |v1, v2| v1 == v2) {
-            Ok(x) => Ok(Val::BoolVal(x)),
-            Err(e) => Err(e),
-        },
-        Expr::NotEqual(e1, e2) => match apply_comp_ordered(*e1, *e2, |v1, v2| v1 != v2) {
-            Ok(x) => Ok(Val::BoolVal(x)),
-            Err(e) => Err(e),
-        },
-        Expr::Greater(e1, e2) => match apply_comp_ordered(*e1, *e2, |v1, v2| v1 > v2) {
-            Ok(x) => Ok(Val::BoolVal(x)),
-            Err(e) => Err(e),
-        },
-        Expr::GreaterEqual(e1, e2) => match apply_comp_ordered(*e1, *e2, |v1, v2| v1 >= v2) {
-            Ok(x) => Ok(Val::BoolVal(x)),
-            Err(e) => Err(e),
-        },
-        Expr::Less(e1, e2) => match apply_comp_ordered(*e1, *e2, |v1, v2| v1 < v2) {
-            Ok(x) => Ok(Val::BoolVal(x)),
-            Err(e) => Err(e),
-        },
-        Expr::LessEqual(e1, e2) => match apply_comp_ordered(*e1, *e2, |v1, v2| v1 <= v2) {
-            Ok(x) => Ok(Val::BoolVal(x)),
-            Err(e) => Err(e),
-        },
-        Expr::Minus(e1, e2) => match apply_arth2(*e1, *e2, |v1, v2| v1 - v2) {
-            Ok(x) => Ok(Val::IntVal(x)),
-            Err(e) => Err(e),
-        },
-        Expr::Plus(e1, e2) => match apply_arth2(*e1, *e2, |v1, v2| v1 + v2) {
-            Ok(x) => Ok(Val::IntVal(x)),
-            Err(e) => Err(e),
-        },
-        Expr::Div(e1, e2) => match apply_arth2(*e1, *e2, |v1, v2| v1 / v2) {
-            Ok(x) => Ok(Val::IntVal(x)),
-            Err(e) => Err(e),
-        },
-        Expr::Mult(e1, e2) => match apply_arth2(*e1, *e2, |v1, v2| v1 * v2) {
-            Ok(x) => Ok(Val::IntVal(x)),
-            Err(e) => Err(e),
-        },
-        Expr::Not(e1) => match apply_logical1(*e1, |v| !v) {
-            Ok(x) => Ok(Val::BoolVal(x)),
-            Err(e) => Err(e),
-        },
-        Expr::Neg(e1) => match apply_arth1(*e1, |v| -v) {
-            Ok(x) => Ok(Val::IntVal(x)),
-            Err(e) => Err(e),
-        },
+        Expr::Equal(e1, e2) => {
+            apply_comp_ordered(*e1, *e2, |v1, v2| v1 == v2).map(|x| Val::BoolVal(x))
+        }
+        Expr::NotEqual(e1, e2) => {
+            apply_comp_ordered(*e1, *e2, |v1, v2| v1 != v2).map(|x| Val::BoolVal(x))
+        }
+        Expr::Greater(e1, e2) => {
+            apply_comp_ordered(*e1, *e2, |v1, v2| v1 > v2).map(|x| Val::BoolVal(x))
+        }
+        Expr::GreaterEqual(e1, e2) => {
+            apply_comp_ordered(*e1, *e2, |v1, v2| v1 >= v2).map(|x| Val::BoolVal(x))
+        }
+        Expr::Less(e1, e2) => {
+            apply_comp_ordered(*e1, *e2, |v1, v2| v1 < v2).map(|x| Val::BoolVal(x))
+        }
+        Expr::LessEqual(e1, e2) => {
+            apply_comp_ordered(*e1, *e2, |v1, v2| v1 <= v2).map(|x| Val::BoolVal(x))
+        }
+        Expr::Minus(e1, e2) => apply_arth2(*e1, *e2, |v1, v2| v1 - v2).map(|x| Val::IntVal(x)),
+        Expr::Plus(e1, e2) => apply_arth2(*e1, *e2, |v1, v2| v1 + v2).map(|x| Val::IntVal(x)),
+        Expr::Div(e1, e2) => apply_arth2(*e1, *e2, |v1, v2| v1 / v2).map(|x| Val::IntVal(x)),
+        Expr::Mult(e1, e2) => apply_arth2(*e1, *e2, |v1, v2| v1 * v2).map(|x| Val::IntVal(x)),
+        Expr::Not(e1) => apply_logical1(*e1, |v| !v).map(|x| Val::BoolVal(x)),
+        Expr::Neg(e1) => apply_arth1(*e1, |v| -v).map(|x| Val::IntVal(x)),
         Expr::Grouping(e1) => eval_expr(*e1, env),
         Expr::IfElse(e1, e2, e3) => match eval_expr(*e1, env) {
             Ok(v) => match v {
