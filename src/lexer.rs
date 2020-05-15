@@ -23,56 +23,48 @@ fn scan_stored(
         Some(scan) => {
             match scan {
                 '\n' | '\t' | '(' | ')' | '-' | '+' | '/' | '*' | ' ' => {
-                    if let Some(x) = to_token(stored) {
-                        acc.push(x);
-                    }
-                    if let Some(x) = to_token(scan.to_string()) {
-                        acc.push(x);
-                    }
-                    scan_stored(acc, String::new(), &slice(to_be_scanned, 1))
+                    // make new fn called add_token(vec, str) -> result
+                    add_token(acc, stored).and_then(|_| {
+                        add_token(acc, scan.to_string())
+                            .and_then(|_| scan_stored(acc, String::new(), &slice(to_be_scanned, 1)))
+                    })
                 }
                 '\r' => scan_stored(acc, stored, &slice(to_be_scanned, 1)),
                 '!' | '>' | '<' => {
-                    if let Some(x) = to_token(stored) {
-                        acc.push(x);
-                    }
-                    let mut to_be_scanned_copy = to_be_scanned.chars();
-                    to_be_scanned_copy.next();
-                    if to_be_scanned_copy.next() != Some('=') {
-                        if let Some(x) = to_token(scan.to_string()) {
-                            acc.push(x);
+                    add_token(acc, stored).and_then(|_| {
+                        let mut to_be_scanned_copy = to_be_scanned.chars();
+                        to_be_scanned_copy.next();
+                        if to_be_scanned_copy.next() != Some('=') {
+                            add_token(acc, scan.to_string()).and_then(|_| {
+                                scan_stored(acc, String::new(), &slice(to_be_scanned, 1))
+                            })
+                        } else {
+                            scan_stored(acc, scan.to_string(), &slice(to_be_scanned, 1))
                         }
-
-                        scan_stored(acc, String::new(), &slice(to_be_scanned, 1))
-                    } else {
-                        scan_stored(acc, scan.to_string(), &slice(to_be_scanned, 1))
-                    }
+                    })
                 }
                 '=' => {
                     match stored.as_str() {
                         "!" | ">" | "<" | "=" => {
-                            if let Some(x) = to_token(format!("{}{}", stored, scan)) {
-                                acc.push(x);
-                            }
-                            scan_stored(acc, String::new(), &slice(to_be_scanned, 1))
+                            add_token(acc, format!("{}{}", stored, scan)).and_then(|_| {
+                                scan_stored(acc, String::new(), &slice(to_be_scanned, 1))
+                            })
                         }
                         // turn stored into token
                         // if next is not "=" turn "=" into token,
                         // else stored becomes "="
                         _ => {
-                            if let Some(x) = to_token(stored) {
-                                acc.push(x);
-                            }
-                            let mut to_be_scanned_copy = to_be_scanned.chars();
-                            to_be_scanned_copy.next();
-                            if to_be_scanned_copy.next() != Some('=') {
-                                if let Some(x) = to_token(String::from("=")) {
-                                    acc.push(x)
+                            add_token(acc, stored).and_then(|_| {
+                                let mut to_be_scanned_copy = to_be_scanned.chars();
+                                to_be_scanned_copy.next();
+                                if to_be_scanned_copy.next() != Some('=') {
+                                    add_token(acc, String::from("=")).and_then(|_| {
+                                        scan_stored(acc, String::new(), &slice(to_be_scanned, 1))
+                                    })
+                                } else {
+                                    scan_stored(acc, String::from("="), &slice(to_be_scanned, 1))
                                 }
-                                scan_stored(acc, String::new(), &slice(to_be_scanned, 1))
-                            } else {
-                                scan_stored(acc, String::from("="), &slice(to_be_scanned, 1))
-                            }
+                            })
                         }
                     }
                 }
@@ -80,11 +72,19 @@ fn scan_stored(
             }
         }
         _ => {
-            if let Some(x) = to_token(stored) {
-                acc.push(x);
-            }
-            Ok(())
+            add_token(acc, stored)
         }
+    }
+}
+
+fn add_token(acc: &mut Vec<Token>, str_token: String) -> Result<(), LexError> {
+    if !str_token.is_empty() && str_token != " " {
+        // println!("{:?}", str_token.chars());
+        to_token(str_token).map(|x| {
+            acc.push(x);
+        })
+    } else {
+        Ok(())
     }
 }
 
@@ -95,12 +95,13 @@ fn slice(s: &String, pos: usize) -> String {
     }
 }
 
-fn to_token(str_token: String) -> Option<Token> {
+fn to_token(str_token: String) -> Result<Token, LexError> {
+    // remove null char
     let str_token = str_token.trim_matches(char::from(0)).to_string();
-    // make this const or static
+    // TODO: make this const or static
     let token_map: HashMap<String, Token> = [
         // ("\t", Token::Indent),
-        // ("\n", Token::NewLine),
+        ("\n", Token::NewLine),
         ("(", Token::LeftParen),
         (")", Token::RightParen),
         ("-", Token::Minus),
@@ -127,26 +128,20 @@ fn to_token(str_token: String) -> Option<Token> {
     .map(|(a, b)| (a.to_string(), b.clone()))
     .collect();
 
-    if str_token == "\n" {
-        Some(Token::NewLine)
-    } else if str_token.trim().is_empty() {
-        None
-    } else {
-        match token_map.get(&str_token) {
-            Some(token) => Some(token.clone()),
-            _ => {
-                if is_digit(&str_token) {
-                    match str_token.parse::<i32>() {
-                        Ok(num) => Some(Token::Number(num)),
-                        Err(e) => panic!("Error parsing i32: {}", e),
-                    }
-                } else if is_alpha(&str_token) {
-                    Some(Token::Identifier(str_token.clone()))
-                } else {
-                    // show error on which line and why
-                    panic!("Error lexing {:?}", str_token.chars())
-                    // Err(LexError::Error)
+    match token_map.get(&str_token) {
+        Some(token) => Ok(token.clone()),
+        _ => {
+            if is_digit(&str_token) {
+                match str_token.parse::<i32>() {
+                    Ok(num) => Ok(Token::Number(num)),
+                    Err(e) => panic!("Error parsing i32: {}", e),
                 }
+            } else if is_alpha(&str_token) {
+                Ok(Token::Identifier(str_token.clone()))
+            } else {
+                // show error on which line and why
+                // panic!("Error lexing {:?}", str_token.chars())
+                Err(LexError::Error)
             }
         }
     }
